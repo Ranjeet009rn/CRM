@@ -18,15 +18,16 @@ require_once 'db.php'; // Assumes $conn is your DB connection
 $data = json_decode(file_get_contents("php://input"), true);
 $username = trim($data['username'] ?? '');
 $password = trim($data['password'] ?? '');
+$role     = trim($data['role'] ?? ''); // ✅ Role added
 
-if (empty($username) || empty($password)) {
-    echo json_encode(["success" => false, "error" => "Missing username or password"]);
+if (empty($username) || empty($password) || empty($role)) {
+    echo json_encode(["success" => false, "error" => "Missing username, password, or role"]);
     exit();
 }
 
-// ===== Validate employee login =====
-$stmt = $conn->prepare("SELECT id, username FROM employee WHERE username = ? AND password = ?");
-$stmt->bind_param("ss", $username, $password);
+// ===== Validate employee login with role =====
+$stmt = $conn->prepare("SELECT id, username FROM employee WHERE username = ? AND password = ? AND role = ?");
+$stmt->bind_param("sss", $username, $password, $role);
 $stmt->execute();
 $result = $stmt->get_result();
 
@@ -39,7 +40,7 @@ if ($result->num_rows > 0) {
         "username" => $user['username']
     ]);
 } else {
-    echo json_encode(["success" => false, "error" => "Invalid credentials"]);
+    echo json_encode(["success" => false, "error" => "Invalid credentials or role"]);
 }
 
 $stmt->close();

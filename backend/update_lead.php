@@ -26,6 +26,7 @@ $loan_reason = $conn->real_escape_string($data['loan_reason']);
 $loan_amount = $conn->real_escape_string($data['loan_amount']);
 $emi = $conn->real_escape_string($data['emi']);
 $interest_rate = $conn->real_escape_string($data['interest_rate']);
+$cancel_reason = isset($data['cancel_reason']) ? $conn->real_escape_string($data['cancel_reason']) : null;
 
 $sql = "UPDATE leads SET
   name = '$name',
@@ -39,7 +40,8 @@ $sql = "UPDATE leads SET
   loan_reason = '$loan_reason',
   loan_amount = '$loan_amount',
   emi = '$emi',
-  interest_rate = '$interest_rate'
+  interest_rate = '$interest_rate',
+  cancel_reason = " . ($cancel_reason !== null ? "'$cancel_reason'" : "NULL") . "
   WHERE id = '$id'";
 
 if ($conn->query($sql)) {

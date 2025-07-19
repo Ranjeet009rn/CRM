@@ -4,7 +4,7 @@ header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Methods: POST");
 header("Access-Control-Allow-Headers: Content-Type");
 
-// Load PHPMailer manually
+// Load PHPMailer
 require 'PHPMailer-master/src/PHPMailer.php';
 require 'PHPMailer-master/src/SMTP.php';
 require 'PHPMailer-master/src/Exception.php';
@@ -12,7 +12,7 @@ require 'PHPMailer-master/src/Exception.php';
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 
-// Read incoming JSON
+// Get POST JSON input
 $data = json_decode(file_get_contents("php://input"), true);
 $to = $data['to'] ?? '';
 $subject = $data['subject'] ?? '';
@@ -23,17 +23,22 @@ if (!$to || !$subject || !$message) {
     exit;
 }
 
-// Setup PHPMailer
 $mail = new PHPMailer(true);
 
 try {
+    // SMTP Setup
     $mail->isSMTP();
-    $mail->Host = 'smtp.gmail.com'; // Or your SMTP host
+    $mail->SMTPDebug = 2; // 💥 VERY IMPORTANT: Enable debug output
+    $mail->Debugoutput = function ($str, $level) {
+        file_put_contents('mail_log.txt', $str . PHP_EOL, FILE_APPEND);
+    };
+
+    $mail->Host = 'smtp.hostinger.com';
     $mail->SMTPAuth = true;
-    $mail->Username = 'support@crm.swift2ai.com'; // Replace with your Gmail
-    $mail->Password = 'Ranjeet@1810';    // Replace with Gmail App Password
-    $mail->SMTPSecure = 'tls';
-    $mail->Port = 587;
+    $mail->Username = 'support@crm.swift2ai.com';
+    $mail->Password = 'Ranjeet@1810'; // Double-check this
+    $mail->SMTPSecure = 'ssl';
+    $mail->Port = 465;
 
     $mail->setFrom('support@crm.swift2ai.com', 'CRM System');
     $mail->addAddress($to);

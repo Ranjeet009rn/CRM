@@ -1,25 +1,21 @@
 <?php
 header("Access-Control-Allow-Origin: *");
-header("Access-Control-Allow-Headers: *");
+header("Access-Control-Allow-Methods: POST, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type");
 header("Content-Type: application/json");
 
-$data = json_decode(file_get_contents("php://input"));
+$data = json_decode(file_get_contents("php://input"), true);
 
-$phone = $data->phone ?? '';
-$message = $data->message ?? '';
-
-if (!$phone || !$message) {
-  echo json_encode(["success" => false, "error" => "Phone or message missing"]);
-  exit;
+// ✅ Fix: Support 'phone' as well
+if (empty($data['mobile']) && !empty($data['phone'])) {
+    $data['mobile'] = $data['phone'];
 }
 
-// ✅ WhatsApp API integration (use real API like Twilio, Gupshup, Interakt, etc.)
-$encodedMessage = urlencode($message);
-$url = "https://wa.me/91{$phone}?text={$encodedMessage}"; // or your actual API call
+$apikey = "2759f0e9c0ad4571a9c99c8cdc47b75d"; // replace with your key
+$mobile = $data['mobile'] ?? '';
+$msg = urlencode($data['message'] ?? '');
 
-// For testing, we return the URL instead of sending
-echo json_encode([
-  "success" => true,
-  "msg" => "WhatsApp message triggered",
-  "link" => $url
-]);
+$url = "https://api.opustechnology.in/wapp/v2/api/send?apikey=$apikey&mobile=$mobile&msg=$msg";
+
+$response = file_get_contents($url);
+echo $response;

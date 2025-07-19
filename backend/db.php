@@ -1,5 +1,8 @@
 <?php
 // Detect environment based on server name or IP
+header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Methods: POST, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type");
 $serverName = $_SERVER['SERVER_NAME'] ?? 'localhost';
 
 if ($serverName === 'localhost' || $serverName === '127.0.0.1') {

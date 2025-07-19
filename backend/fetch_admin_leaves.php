@@ -1,4 +1,6 @@
 <?php
+// fetch_admin_leaves.php
+
 // CORS Headers
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Methods: GET, OPTIONS");
@@ -14,27 +16,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 // Include database connection
 require_once 'db.php';
 
-// Query to fetch all leave records
-$sql = "
-    SELECT 
-        id, 
-        name, 
-        reason, 
-        startDate, 
-        endDate, 
-        appliedDate, 
-        status
-    FROM leaves 
-    ORDER BY id DESC
-";
-
+// ✅ Fetch all leave records for admin
+$sql = "SELECT id, name, reason, startDate, endDate, appliedDate, status FROM leaves ORDER BY id DESC";
 $result = $conn->query($sql);
 
 if (!$result) {
     http_response_code(500);
     echo json_encode([
         "success" => false,
-        "error" => "Database query failed: " . $conn->error
+        "error" => "Database error: " . $conn->error
     ]);
     exit();
 }

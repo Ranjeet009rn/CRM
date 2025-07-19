@@ -17,6 +17,9 @@ require_once 'db.php';
 // ✅ Get incoming JSON input
 $input = json_decode(file_get_contents("php://input"), true);
 
+// ✅ Log input for debugging (optional - you can delete this later)
+file_put_contents("log_input.json", json_encode($input, JSON_PRETTY_PRINT));
+
 if (!$input) {
     http_response_code(400);
     echo json_encode(["error" => "Invalid input"]);
@@ -31,9 +34,18 @@ $endDate = $input['endDate'] ?? null;
 $appliedDate = $input['appliedDate'] ?? date('Y-m-d');
 $status = 'pending';
 
+// ✅ Additional validation
 if (!$name || !$reason || !$startDate || !$endDate) {
     http_response_code(400);
-    echo json_encode(["error" => "Missing required fields"]);
+    echo json_encode([
+        "error" => "Missing required fields",
+        "details" => [
+            "name" => $name,
+            "reason" => $reason,
+            "startDate" => $startDate,
+            "endDate" => $endDate
+        ]
+    ]);
     exit();
 }
 
@@ -43,6 +55,12 @@ $stmt = $conn->prepare("
     VALUES (?, ?, ?, ?, ?, ?)
 ");
 
+if (!$stmt) {
+    http_response_code(500);
+    echo json_encode(["error" => "SQL Prepare failed", "details" => $conn->error]);
+    exit();
+}
+
 $stmt->bind_param("ssssss", $name, $reason, $startDate, $endDate, $appliedDate, $status);
 
 // ✅ Execute and respond
@@ -50,7 +68,7 @@ if ($stmt->execute()) {
     echo json_encode(["success" => true, "id" => $stmt->insert_id]);
 } else {
     http_response_code(500);
-    echo json_encode(["error" => $stmt->error]);
+    echo json_encode(["error" => "Execute failed", "details" => $stmt->error]);
 }
 
 $stmt->close();

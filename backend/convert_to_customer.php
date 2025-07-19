@@ -5,7 +5,7 @@ header("Access-Control-Allow-Headers: Content-Type");
 header("Access-Control-Allow-Methods: POST");
 header("Content-Type: application/json");
 
-// === Disable PHP warnings from being printed (so it doesn't break JSON)
+// === Disable warnings to avoid breaking JSON
 ini_set('display_errors', 0);
 error_reporting(0);
 
@@ -26,8 +26,7 @@ if (!$id) {
 }
 
 // === Get Lead
-$q = "SELECT * FROM leads WHERE id = ?";
-$stmt = $conn->prepare($q);
+$stmt = $conn->prepare("SELECT * FROM leads WHERE id = ?");
 $stmt->bind_param("i", $id);
 $stmt->execute();
 $res = $stmt->get_result();
@@ -40,6 +39,17 @@ if (!$lead) {
 
 if ($lead["status"] !== "Confirm") {
   echo json_encode(["success" => false, "error" => "Only Confirm leads can be converted"]);
+  exit;
+}
+
+// === Check if already converted
+$check = $conn->prepare("SELECT id FROM customer WHERE lead_id = ?");
+$check->bind_param("i", $id);
+$check->execute();
+$checkRes = $check->get_result();
+
+if ($checkRes->num_rows > 0) {
+  echo json_encode(["success" => false, "error" => "Already converted"]);
   exit;
 }
 

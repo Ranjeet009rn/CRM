@@ -1,12 +1,12 @@
 <?php
 require 'db.php';
 
-// Set headers
+// CORS headers
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Methods: GET");
 header("Content-Type: application/json");
 
-// Get username from query param
+// Get username
 $username = $_GET['username'] ?? '';
 
 if (empty($username)) {
@@ -14,14 +14,19 @@ if (empty($username)) {
     exit;
 }
 
-// Prepare and execute query to fetch only assigned leads
+// Prepare SQL query
 $query = "SELECT * FROM leads WHERE assigned_to = ?";
 $stmt = $conn->prepare($query);
+
+if (!$stmt) {
+    echo json_encode(["success" => false, "message" => "SQL error: " . $conn->error]);
+    exit;
+}
+
 $stmt->bind_param("s", $username);
 $stmt->execute();
 $result = $stmt->get_result();
 
-// Fetch and return results
 $leads = [];
 while ($row = $result->fetch_assoc()) {
     $leads[] = $row;
