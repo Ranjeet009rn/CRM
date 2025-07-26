@@ -55,7 +55,7 @@ if ($password !== null) {
         exit();
     }
     $updates[] = "password = ?";
-    $params[] = password_hash($password, PASSWORD_DEFAULT); // Always hash passwords
+    $params[] = $password; // Store as plain text (not hashed)
     $types .= 's';
 }
 

@@ -16,22 +16,22 @@ require_once 'db.php';
 
 // Validate user_id
 $user_id = isset($_GET['user_id']) ? intval($_GET['user_id']) : 0;
+$user_type = isset($_GET['user_type']) ? $_GET['user_type'] : '';
 
-if (!$user_id) {
-    echo json_encode(["success" => false, "error" => "Missing user_id"]);
-    exit();
+if ($user_type === 'admin') {
+    $sql = "SELECT * FROM meetings WHERE user_type = 'admin' ORDER BY date DESC";
+    $stmt = $conn->prepare($sql);
+} else {
+    $sql = "SELECT * FROM meetings WHERE user_id = ? AND user_type = 'employee' ORDER BY date DESC";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("i", $user_id);
 }
-
-// Query for admin meetings only
-$sql = "SELECT * FROM meetings WHERE user_id = ? AND user_type = 'admin' ORDER BY date DESC";
-$stmt = $conn->prepare($sql);
 
 if (!$stmt) {
     echo json_encode(["success" => false, "error" => "Database error: " . $conn->error]);
     exit();
 }
 
-$stmt->bind_param("i", $user_id);
 $stmt->execute();
 $result = $stmt->get_result();
 

@@ -14,9 +14,9 @@ if ($serverName === 'localhost' || $serverName === '127.0.0.1') {
 } else {
     // ✅ Hostinger Production Configuration
     $host = "193.203.184.228"; // or use "localhost" if Hostinger says so
-    $username = "u876295706_swift";
+    $username = "u876295706_support1";
     $password = "Ranjeet@1810";
-    $database = "u876295706_crm";
+    $database = "u876295706_crm_loan";
 }
 
 // Create connection

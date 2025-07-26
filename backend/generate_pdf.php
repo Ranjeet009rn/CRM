@@ -70,5 +70,5 @@ file_put_contents("$outputDir/$filename", $pdf->output());
 
 echo json_encode([
   "success" => true,
-  "pdf_url" => "http://localhost/CRM/CRM/backend/pdfs/$filename"
+  "pdf_url" => "https://crm.swift2ai.com/backend/pdfs/$filename"
 ]);

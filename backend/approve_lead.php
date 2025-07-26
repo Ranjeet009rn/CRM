@@ -55,7 +55,7 @@ try {
     }
 
     // Approve the lead
-    $approveStmt = $conn->prepare("UPDATE leads SET is_approved = 1, approved_at = NOW() WHERE id = ?");
+    $approveStmt = $conn->prepare("UPDATE leads SET is_approved = 1, approved_at = NOW(), status = 'Processing' WHERE id = ?");
     $approveStmt->bind_param('i', $leadId);
     $approveStmt->execute();
 

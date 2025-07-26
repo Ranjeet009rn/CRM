@@ -55,16 +55,17 @@ $loan_amount    = $input['loan_amount'];
 $emi            = $input['emi'];
 $interest_rate  = $input['interest_rate'];
 $cancel_reason  = $input['cancel_reason'] ?? ''; // NEW FIELD
+$ai_token       = $input['ai_token'] ?? null;
 
 // Insert query
 $stmt = $conn->prepare("
     INSERT INTO leads 
-    (name, email, phone, source, status, assigned_to, notes, label, reference, address, cd_date, loan_reason, loan_amount, emi, interest_rate, cancel_reason)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    (name, email, phone, source, status, assigned_to, notes, label, reference, address, cd_date, loan_reason, loan_amount, emi, interest_rate, cancel_reason, ai_token)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ");
 
 $stmt->bind_param(
-    "ssssssssssssssss",
+    "sssssssssssssssss",
     $name,
     $email,
     $phone,
@@ -80,7 +81,8 @@ $stmt->bind_param(
     $loan_amount,
     $emi,
     $interest_rate,
-    $cancel_reason
+    $cancel_reason,
+    $ai_token
 );
 
 // Execute and respond

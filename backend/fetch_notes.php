@@ -19,9 +19,14 @@ if (!$user_id || !$user_type) {
   exit();
 }
 
-$sql = "SELECT * FROM notes WHERE user_id = ? AND user_type = ? ORDER BY created_at DESC";
-$stmt = $conn->prepare($sql);
-$stmt->bind_param("is", $user_id, $user_type);
+if ($user_type === 'admin') {
+  $sql = "SELECT * FROM notes WHERE user_type = 'admin' ORDER BY created_at DESC";
+  $stmt = $conn->prepare($sql);
+} else {
+  $sql = "SELECT * FROM notes WHERE user_id = ? AND user_type = 'employee' ORDER BY created_at DESC";
+  $stmt = $conn->prepare($sql);
+  $stmt->bind_param("i", $user_id);
+}
 $stmt->execute();
 $result = $stmt->get_result();
 
