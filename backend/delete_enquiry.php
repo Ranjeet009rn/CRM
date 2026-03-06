@@ -1,16 +1,17 @@
 <?php
 // Set headers first to ensure proper content type
 header("Access-Control-Allow-Origin: *");
-header("Content-Type: application/json; charset=UTF-8");
-header("Access-Control-Allow-Methods: POST");
-header("Access-Control-Max-Age: 3600");
-header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
+header("Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type, Authorization");
+header("Access-Control-Max-Age: 86400");
 
-// Database configuration
-$servername = "localhost";
-$username = "root";
-$password = "";
-$dbname = "crm";
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') 
+{ http_response_code(200);
+  exit;
+} 
+
+// Use central DB configuration
+require_once __DIR__ . '/db.php';
 
 // Initialize response array
 $response = [
@@ -19,12 +20,9 @@ $response = [
 ];
 
 try {
-    // Create connection
-    $conn = new mysqli($servername, $username, $password, $dbname);
-
-    // Check connection
-    if ($conn->connect_error) {
-        throw new Exception("Database connection failed: " . $conn->connect_error);
+    // Ensure connection from db.php is valid
+    if (!isset($conn) || !($conn instanceof mysqli) || $conn->connect_error) {
+        throw new Exception("Database connection failed: " . ($conn->connect_error ?? 'Connection not initialized'));
     }
 
     // Get the posted data
@@ -57,13 +55,14 @@ try {
         $response["message"] = "No enquiry found with that ID";
     }
 
-    $stmt->close();
-    $conn->close();
-
 } catch (Exception $e) {
     http_response_code(500);
     $response["message"] = $e->getMessage();
 }
+
+// Ensure resources are closed regardless of outcome
+if (isset($stmt) && $stmt instanceof mysqli_stmt) { $stmt->close(); }
+if (isset($conn) && $conn instanceof mysqli) { $conn->close(); }
 
 // Ensure we only output JSON
 echo json_encode($response);

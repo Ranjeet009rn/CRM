@@ -11,7 +11,7 @@ if (empty($data['mobile']) && !empty($data['phone'])) {
     $data['mobile'] = $data['phone'];
 }
 
-$apikey = "2759f0e9c0ad4571a9c99c8cdc47b75d"; // ✅ Use your Opus API key
+$apikey = "2660c91538894998818c9391509a23d0"; // ✅ Use your Opus API key
 $mobile = $data['mobile'] ?? '';
 $customMessage = $data['message'] ?? '';
 

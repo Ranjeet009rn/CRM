@@ -29,10 +29,11 @@ if (!$data || !isset($data['id']) || !isset($data['status'])) {
 $taskId = $data['id'];
 $status = $data['status'];
 
-// Connect to DB
-$conn = new mysqli("localhost", "root", "", "crm");
-if ($conn->connect_error) {
+// Connect to DB via central config
+require_once __DIR__ . '/db.php';
+if (!isset($conn) || !($conn instanceof mysqli) || $conn->connect_error) {
     echo json_encode(["success" => false, "message" => "DB connection failed"]);
+    if (isset($conn) && $conn instanceof mysqli) { @$conn->close(); }
     exit();
 }
 
@@ -46,5 +47,5 @@ if ($stmt->execute()) {
     echo json_encode(["success" => false, "message" => "Update failed"]);
 }
 
-$stmt->close();
-$conn->close();
+if (isset($stmt) && $stmt instanceof mysqli_stmt) { $stmt->close(); }
+if (isset($conn) && $conn instanceof mysqli) { $conn->close(); }

@@ -18,9 +18,10 @@ $assignedTo  = $_POST['assignedTo'] ?? '';
 $priority    = $_POST['priority'] ?? '';
 $recurrence  = $_POST['recurrence'] ?? '';
 $status      = $_POST['status'] ?? '';
-$startDate   = $_POST['startDate'] ?? null;
-$endDate     = $_POST['endDate'] ?? null;
+$startDate   = $_POST['startDate'] ?? null; // currently unused in DB schema
+$endDate     = $_POST['endDate'] ?? null;   // we will treat this as due_date
 $description = $_POST['description'] ?? '';
+$createdBy   = $_POST['createdBy'] ?? 'admin';
 $filename    = null;
 
 // Handle Attachment Upload
@@ -42,11 +43,12 @@ if (isset($_FILES['attachment']) && $_FILES['attachment']['error'] === UPLOAD_ER
     }
 }
 
-// Insert into Database
+// Insert into Database using new tasks schema
+// tasks: id, title, description, created_by, assigned_to, status, priority, due_date, image_path, created_at, updated_at
 $stmt = $conn->prepare("
     INSERT INTO tasks 
-    (subject, assigned_to, priority, recurrence, status, start_date, end_date, description, attachment) 
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    (title, description, created_by, assigned_to, status, priority, due_date, image_path) 
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 ");
 
 if (!$stmt) {
@@ -55,7 +57,10 @@ if (!$stmt) {
     exit();
 }
 
-$stmt->bind_param("sssssssss", $subject, $assignedTo, $priority, $recurrence, $status, $startDate, $endDate, $description, $filename);
+$dueDate = $endDate; // map End Date field to due_date column
+$title   = $subject;
+
+$stmt->bind_param("ssssssss", $title, $description, $createdBy, $assignedTo, $status, $priority, $dueDate, $filename);
 
 if ($stmt->execute()) {
     echo json_encode(["success" => true, "id" => $stmt->insert_id]);

@@ -3,6 +3,9 @@ header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Headers: Content-Type");
 header("Content-Type: application/json");
 
+// Use central production database connection
+require_once __DIR__ . '/db.php';
+
 $data = json_decode(file_get_contents("php://input"), true);
 
 if (!isset($data["id"])) {
@@ -10,24 +13,21 @@ if (!isset($data["id"])) {
     exit;
 }
 
-$noteId = $data["id"];
+$noteId = (int)$data["id"];
 
-$conn = new mysqli("localhost", "root", "", "crm"); // Update DB name if needed
+try {
+    $stmt = $conn->prepare("DELETE FROM notes WHERE id = ?");
+    $stmt->bind_param("i", $noteId);
+    $stmt->execute();
 
-if ($conn->connect_error) {
-    echo json_encode(["success" => false, "message" => "Database connection failed"]);
-    exit;
-}
-
-$stmt = $conn->prepare("DELETE FROM notes WHERE id = ?");
-$stmt->bind_param("i", $noteId);
-
-if ($stmt->execute()) {
     echo json_encode(["success" => true]);
-} else {
-    echo json_encode(["success" => false, "message" => "Failed to delete note"]);
-}
 
-$stmt->close();
-$conn->close();
+    $stmt->close();
+    $conn->close();
+} catch (Exception $e) {
+    echo json_encode([
+        "success" => false,
+        "message" => "Failed to delete note"
+    ]);
+}
 ?>

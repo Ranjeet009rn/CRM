@@ -21,7 +21,7 @@ ini_set('log_errors', 1);
 require_once 'db.php';
 
 try {
-    $sql = "SELECT id, username, password, email, mobile, role FROM employee ORDER BY id ASC";
+    $sql = "SELECT id, username, password, email, mobile, role, sub_role FROM employee ORDER BY id ASC";
     $result = $conn->query($sql);
     
     if (!$result) {

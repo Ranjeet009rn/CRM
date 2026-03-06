@@ -1,4 +1,8 @@
 <?php
+// Disable HTML error display and ensure JSON responses
+ini_set('display_errors', 0);
+error_reporting(E_ALL);
+
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type, Authorization");
@@ -16,20 +20,94 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     exit();
 }
 
-require_once 'db.php';
+try {
+    require_once 'db.php';
+    require_once 'permissions.php';
 
-$sql = "SELECT id, TRIM(assigned_to) AS assigned_to, TRIM(subject) AS subject, priority, recurrence, status, start_date, end_date, description, attachment FROM tasks ORDER BY id DESC";
-$result = $conn->query($sql);
+    // Get user info
+    $userInfo = getUserFromRequest();
+    $role = $userInfo['role'] ?: ($_GET['user_type'] ?? '');
+    $username = $userInfo['username'];
 
-$tasks = [];
-if ($result && $result->num_rows > 0) {
-    while ($row = $result->fetch_assoc()) {
-        $row = array_map(function ($val) {
-            return is_string($val) ? trim($val) : $val;
-        }, $row);
-        $tasks[] = $row;
+    // Optional limit for dashboard / listing (default 100, max 1000)
+    $limit = isset($_GET['limit']) ? (int) $_GET['limit'] : 100;
+    if ($limit <= 0) {
+        $limit = 100;
+    }
+    if ($limit > 1000) {
+        $limit = 1000;
+    }
+
+    // Build query based on user role with RBAC
+    if (canViewAllData($role)) {
+        // Admin sees all tasks (no auto-expiry by due_date)
+        $sql = "SELECT * FROM tasks 
+                ORDER BY id DESC LIMIT ?";
+        $stmt = $conn->prepare($sql);
+        if (!$stmt) {
+            throw new Exception("Prepare failed: " . $conn->error);
+        }
+        $stmt->bind_param('i', $limit);
+    } else if (!empty($username)) {
+        // Non-admin users see only tasks they created OR tasks assigned to them (no auto-expiry)
+        $sql = "SELECT * FROM tasks 
+                WHERE (created_by = ? OR assigned_to = ?)
+                ORDER BY id DESC LIMIT ?";
+        $stmt = $conn->prepare($sql);
+        if (!$stmt) {
+            throw new Exception("Prepare failed: " . $conn->error);
+        }
+        $stmt->bind_param('ssi', $username, $username, $limit);
+    } else {
+        // Fallback: show all tasks if no username provided (backward compatibility, no auto-expiry)
+        $sql = "SELECT * FROM tasks 
+                ORDER BY id DESC LIMIT ?";
+        $stmt = $conn->prepare($sql);
+        if (!$stmt) {
+            throw new Exception("Prepare failed: " . $conn->error);
+        }
+        $stmt->bind_param('i', $limit);
+    }
+    if (!$stmt->execute()) {
+        throw new Exception("Execute failed: " . $stmt->error);
+    }
+    $result = $stmt->get_result();
+
+    if (!$result) {
+        throw new Exception("Query failed: " . $conn->error);
+    }
+
+    $tasks = [];
+    if ($result && $result->num_rows > 0) {
+        while ($row = $result->fetch_assoc()) {
+            $row = array_map(function ($val) {
+                return is_string($val) ? trim($val) : $val;
+            }, $row);
+            $tasks[] = $row;
+        }
+    }
+
+    echo json_encode(["success" => true, "tasks" => $tasks]);
+    if (isset($stmt) && $stmt) {
+        $stmt->close();
+    }
+    $conn->close();
+
+} catch (Exception $e) {
+    http_response_code(500);
+    error_log("fetch_tasks.php error: " . $e->getMessage());
+    error_log("Stack trace: " . $e->getTraceAsString());
+    echo json_encode([
+        "success" => false,
+        "error" => "Server error: " . $e->getMessage(),
+        "file" => basename($e->getFile()),
+        "line" => $e->getLine()
+    ]);
+    if (isset($stmt) && $stmt) {
+        $stmt->close();
+    }
+    if (isset($conn)) {
+        $conn->close();
     }
 }
-echo json_encode(["success" => true, "tasks" => $tasks]);
-$conn->close();
 ?>

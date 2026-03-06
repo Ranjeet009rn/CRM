@@ -5,51 +5,53 @@ header("Access-Control-Allow-Headers: Content-Type");
 header("Access-Control-Allow-Methods: POST");
 header("Content-Type: application/json");
 
-// === Disable warnings to avoid breaking JSON
-ini_set('display_errors', 0);
-error_reporting(0);
-
-// === DB Connection
-$conn = new mysqli("localhost", "root", "", "CRM");
-if ($conn->connect_error) {
-  echo json_encode(["success" => false, "error" => "DB connection failed"]);
-  exit;
-}
+// Use shared database configuration (handles localhost vs Hostinger)
+require_once __DIR__ . '/db.php';
 
 // === Read JSON input
 $data = json_decode(file_get_contents("php://input"), true);
-$id = $data["id"] ?? null;
+// Accept either id or lead_id from frontend, but internally use lead_id column
+$leadId = isset($data["lead_id"]) ? intval($data["lead_id"]) : intval($data["id"] ?? 0);
 
-if (!$id) {
+if (!$leadId) {
   echo json_encode(["success" => false, "error" => "Lead ID is required"]);
+  $conn->close();
   exit;
 }
 
 // === Get Lead
-$stmt = $conn->prepare("SELECT * FROM leads WHERE id = ?");
-$stmt->bind_param("i", $id);
+$stmt = $conn->prepare("SELECT * FROM leads WHERE lead_id = ?");
+$stmt->bind_param("i", $leadId);
 $stmt->execute();
 $res = $stmt->get_result();
 $lead = $res->fetch_assoc();
 
 if (!$lead) {
   echo json_encode(["success" => false, "error" => "Lead not found"]);
+  $stmt->close();
+  $conn->close();
   exit;
 }
 
-if ($lead["status"] !== "Confirm") {
-  echo json_encode(["success" => false, "error" => "Only Confirm leads can be converted"]);
+// Allow conversion once lead is Scrutinized
+if ($lead["status"] !== "Scrutinized") {
+  echo json_encode(["success" => false, "error" => "Only Scrutinized leads can be converted"]);
+  $stmt->close();
+  $conn->close();
   exit;
 }
 
 // === Check if already converted
 $check = $conn->prepare("SELECT id FROM customer WHERE lead_id = ?");
-$check->bind_param("i", $id);
+$check->bind_param("i", $leadId);
 $check->execute();
 $checkRes = $check->get_result();
 
 if ($checkRes->num_rows > 0) {
   echo json_encode(["success" => false, "error" => "Already converted"]);
+  $check->close();
+  $stmt->close();
+  $conn->close();
   exit;
 }
 
@@ -59,7 +61,7 @@ $insert = $conn->prepare("INSERT INTO customer
   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
 );
 $insert->bind_param("issssssss",
-  $lead["id"],
+  $lead["lead_id"],
   $lead["name"],
   $lead["email"],
   $lead["phone"],
@@ -76,5 +78,8 @@ if ($insert->execute()) {
   echo json_encode(["success" => false, "error" => "Insert failed"]);
 }
 
+$insert->close();
+$check->close();
+$stmt->close();
 $conn->close();
 ?>

@@ -18,7 +18,7 @@ if (!$user_id) {
     exit();
 }
 
-$sql = "SELECT * FROM notes WHERE user_id = ? AND user_type = 'employee' ORDER BY created_at DESC";
+$sql = "SELECT * FROM notes WHERE user_id = ? ORDER BY created_at DESC";
 $stmt = $conn->prepare($sql);
 $stmt->bind_param("i", $user_id);
 $stmt->execute();

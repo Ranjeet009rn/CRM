@@ -20,15 +20,14 @@ if (!$id) {
     exit;
 }
 
-// Fetch form data
-$subject     = $_POST['subject'] ?? '';
+// Fetch form data (match actual tasks table: title, due_date, etc.)
+$title       = $_POST['subject'] ?? $_POST['title'] ?? '';
 $status      = $_POST['status'] ?? '';
 $assigned_to = $_POST['assigned_to'] ?? '';
 $priority    = $_POST['priority'] ?? '';
-$recurrence  = $_POST['recurrence'] ?? '';
-$start_date  = $_POST['start_date'] ?? '';
-$end_date    = $_POST['end_date'] ?? '';
+$due_date    = $_POST['due_date'] ?? $_POST['end_date'] ?? '';
 $description = $_POST['description'] ?? '';
+
 
 // File upload handling
 $attachment_name = null;
@@ -50,26 +49,27 @@ if (isset($_FILES['attachment']) && $_FILES['attachment']['error'] === 0) {
     }
 }
 
-// Build SQL dynamically
+// Build SQL dynamically to update real columns
 $sql = "UPDATE tasks SET 
-            subject = ?, 
+            title = ?, 
             status = ?, 
             assigned_to = ?, 
             priority = ?, 
-            recurrence = ?, 
-            start_date = ?, 
-            end_date = ?, 
+            due_date = ?, 
             description = ?";
 
 $params = [
-    $subject, $status, $assigned_to, $priority,
-    $recurrence, $start_date, $end_date, $description
+    $title, $status, $assigned_to, $priority,
+    $due_date, $description
 ];
 
-$types = "ssssssss";
+$types = "ssssss";
+
+
 
 if ($attachment_name) {
-    $sql .= ", attachment = ?";
+    // Store attachment path in image_path column
+    $sql .= ", image_path = ?";
     $params[] = $attachment_name;
     $types .= "s";
 }

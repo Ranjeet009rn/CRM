@@ -15,7 +15,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 // ===== DB Connection =====
 require_once 'db.php';
 
-$sql = "SELECT id, username AS name FROM employee ORDER BY username ASC";
+$sql = "SELECT id, username AS name, username, email, role, sub_role FROM employee ORDER BY username ASC";
 
 $result = $conn->query($sql);
 $employees = [];

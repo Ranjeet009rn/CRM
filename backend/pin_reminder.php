@@ -21,6 +21,7 @@ if (!$id) {
 $conn = new mysqli("localhost", "root", "", "crm");
 if ($conn->connect_error) {
     echo json_encode(["success" => false, "message" => "DB connection failed"]);
+    @$conn->close();
     exit();
 }
 

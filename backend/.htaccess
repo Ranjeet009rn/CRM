@@ -1,0 +1,25 @@
+<IfModule mod_headers.c>
+    Header set Content-Type "application/json; charset=utf-8"
+</IfModule>
+
+<IfModule http2_module>
+    H2Push Off
+    H2Direct Off
+</IfModule>
+
+SetEnvIf Request_URI "^/CRM/backend/" no-http2
+
+# Global CORS for all backend endpoints
+<IfModule mod_headers.c>
+    Header always set Access-Control-Allow-Origin "*"
+    Header always set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+    Header always set Access-Control-Allow-Headers "Content-Type, Authorization"
+    Header always set Access-Control-Max-Age "86400"
+</IfModule>
+
+# Short-circuit CORS preflight requests with empty 204
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteCond %{REQUEST_METHOD} =OPTIONS
+    RewriteRule ^ - [R=204,L]
+</IfModule>

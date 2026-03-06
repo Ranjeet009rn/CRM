@@ -25,22 +25,29 @@ if (empty($username) || empty($password) || empty($role)) {
     exit();
 }
 
-// ===== Validate employee login with role =====
-$stmt = $conn->prepare("SELECT id, username FROM employee WHERE username = ? AND password = ? AND role = ?");
-$stmt->bind_param("sss", $username, $password, $role);
+// ===== Validate employee login with case-insensitive role =====
+$stmt = $conn->prepare("SELECT id, username, role, sub_role FROM employee WHERE username = ? AND password = ?");
+$stmt->bind_param("ss", $username, $password);
 $stmt->execute();
 $result = $stmt->get_result();
 
 if ($result->num_rows > 0) {
     $user = $result->fetch_assoc();
-
-    echo json_encode([
-        "success" => true,
-        "user_id" => $user['id'],
-        "username" => $user['username']
-    ]);
+    
+    // Check if role matches (case-insensitive)
+    if (strtolower($user['role']) === strtolower($role)) {
+        echo json_encode([
+            "success" => true,
+            "user_id" => $user['id'],
+            "username" => $user['username'],
+            "role" => $user['role'],
+            "sub_role" => ($user['sub_role'] ?? '')
+        ]);
+    } else {
+        echo json_encode(["success" => false, "error" => "Role mismatch. User role: " . $user['role']]);
+    }
 } else {
-    echo json_encode(["success" => false, "error" => "Invalid credentials or role"]);
+    echo json_encode(["success" => false, "error" => "Invalid username or password"]);
 }
 
 $stmt->close();

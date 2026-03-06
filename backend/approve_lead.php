@@ -7,12 +7,17 @@ error_reporting(E_ALL);
 // CORS Configuration
 $allowedOrigins = [
     'http://localhost:5173',
-    'http://127.0.0.1:5173'
+    'http://127.0.0.1:5173',
+    'https://ingavalebusinesssolution.in',
+    'http://ingavalebusinesssolution.in'
 ];
 
 $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
 if (in_array($origin, $allowedOrigins)) {
     header("Access-Control-Allow-Origin: $origin");
+} else {
+    // Allow all origins for now (you can restrict this later)
+    header("Access-Control-Allow-Origin: *");
 }
 
 header("Access-Control-Allow-Methods: POST, OPTIONS");
@@ -44,24 +49,84 @@ try {
 
     $leadId = (int)$input['id'];
     
-    // Check if lead exists and is unapproved
-    $checkStmt = $conn->prepare("SELECT id FROM leads WHERE id = ? AND is_approved = 0");
-    $checkStmt->bind_param('i', $leadId);
-    $checkStmt->execute();
-    $result = $checkStmt->get_result();
+    // Debug: Log the lead ID being processed
+    error_log("Approving lead ID: " . $leadId);
     
-    if ($result->num_rows === 0) {
-        throw new Exception('Lead not found or already approved', 404);
+    // First check if lead exists at all
+    $existsStmt = $conn->prepare("SELECT lead_id, is_approved FROM leads WHERE lead_id = ?");
+    $existsStmt->bind_param('i', $leadId);
+    $existsStmt->execute();
+    $existsResult = $existsStmt->get_result();
+    $leadInfo = $existsResult->fetch_assoc();
+    
+    if (!$leadInfo) {
+        throw new Exception("Lead ID $leadId does not exist", 404);
+    }
+    
+    error_log("Lead $leadId exists with is_approved = " . ($leadInfo['is_approved'] ?? 'NULL'));
+    
+    // Check if lead is already approved
+    if ($leadInfo['is_approved'] == 1) {
+        throw new Exception("Lead ID $leadId is already approved", 400);
     }
 
     // Approve the lead
-    $approveStmt = $conn->prepare("UPDATE leads SET is_approved = 1, approved_at = NOW(), status = 'Processing' WHERE id = ?");
+    $approveStmt = $conn->prepare("UPDATE leads SET is_approved = 1 WHERE lead_id = ?");
     $approveStmt->bind_param('i', $leadId);
     $approveStmt->execute();
 
     if ($approveStmt->affected_rows === 0) {
         throw new Exception('Failed to approve lead', 500);
     }
+    
+    // Auto-add to sanctioned_loan table when approved
+    // Get lead details first
+    error_log("Fetching lead data for sanctioned_loan insertion");
+    $leadStmt = $conn->prepare("SELECT name, phone, loan_amount, emi_frequency, interest_rate, loan_tenure, emi FROM leads WHERE lead_id = ?");
+    $leadStmt->bind_param('i', $leadId);
+    $leadStmt->execute();
+    $leadResult = $leadStmt->get_result();
+    $leadData = $leadResult->fetch_assoc();
+    
+    error_log("Lead data: " . json_encode($leadData));
+    
+    if ($leadData && $leadData['loan_amount']) {
+        $customerName = $leadData['name'] ?? 'Unknown';
+        $phone = $leadData['phone'] ?? '';
+        $loanAmount = $leadData['loan_amount'];
+        $emiType = $leadData['emi_frequency'] ?? 'Monthly';
+        $interestRate = $leadData['interest_rate'] ?? 10;
+        $loanTenure = $leadData['loan_tenure'] ?? 12;
+        $emi = $leadData['emi'] ?? 0;
+        
+        // Insert into sanctioned_loan table with minimal required fields
+        $sanctionSql = "INSERT INTO sanctioned_loan 
+                       (lead_id, sanctioned_date, loan_amount, emi_type, interest_rate, loan_tenure, emi, claim_status, disbursed) 
+                       VALUES (?, CURDATE(), ?, 'Monthly', 10, 12, 0, 'not started', 'No')
+                       ON DUPLICATE KEY UPDATE 
+                       loan_amount = VALUES(loan_amount),
+                       sanctioned_date = CURDATE()";
+        
+        $sanctionStmt = $conn->prepare($sanctionSql);
+        if ($sanctionStmt) {
+            error_log("Inserting into sanctioned_loan table");
+            $sanctionStmt->bind_param("id", 
+                $leadId, 
+                $loanAmount
+            );
+            
+            if ($sanctionStmt->execute()) {
+                error_log("Successfully inserted into sanctioned_loan table");
+            } else {
+                error_log("Failed to insert into sanctioned_loan: " . $sanctionStmt->error);
+            }
+            $sanctionStmt->close();
+        } else {
+            error_log("Failed to prepare sanctioned_loan statement: " . $conn->error);
+        }
+    }
+    
+    if (isset($leadStmt)) $leadStmt->close();
 
     $response = [
         'success' => true,

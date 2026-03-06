@@ -22,25 +22,36 @@ if (!$data) {
     exit();
 }
 
-$user_id   = isset($data->user_id) ? intval($data->user_id) : null;
+$user_id = isset($data->user_id) ? intval($data->user_id) : null;
 $user_type = isset($data->user_type) ? strtolower(trim($data->user_type)) : null;
-$title     = isset($data->title) ? trim($data->title) : '';
-$content   = isset($data->content) ? trim($data->content) : '';
+$title = isset($data->title) ? trim($data->title) : '';
+$content = isset($data->content) ? trim($data->content) : '';
 
 if (!$user_id || !$user_type || !$title || !$content) {
     echo json_encode(["success" => false, "error" => "Missing required fields"]);
     exit();
 }
 
-if (strlen($title) < 3 || strlen($content) < 5) {
-    echo json_encode(["success" => false, "error" => "Title or content too short"]);
+if (strlen($title) < 1 || strlen($content) < 1) {
+    echo json_encode(["success" => false, "error" => "Title and content cannot be empty"]);
     exit();
 }
 
-$allowedTypes = ['admin', 'employee'];
+// Allow admin, employee, and all sales/agent roles
+$allowedTypes = ['admin', 'employee', 'sales officer', 'sales agent', 'agent', 'staff', 'manager', 'supervisor'];
 if (!in_array($user_type, $allowedTypes)) {
-    echo json_encode(["success" => false, "error" => "Invalid user type"]);
-    exit();
+    // Also allow any type that contains 'employee', 'sales', or 'agent' as substring
+    $isAllowed = false;
+    foreach (['employee', 'sales', 'agent', 'staff', 'manager'] as $keyword) {
+        if (strpos($user_type, $keyword) !== false) {
+            $isAllowed = true;
+            break;
+        }
+    }
+    if (!$isAllowed) {
+        echo json_encode(["success" => false, "error" => "Invalid user type"]);
+        exit();
+    }
 }
 
 $sql = "INSERT INTO notes (user_id, user_type, title, content, created_at) VALUES (?, ?, ?, ?, NOW())";
